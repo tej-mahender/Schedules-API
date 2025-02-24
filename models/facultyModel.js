@@ -1,9 +1,18 @@
 const mongoose = require("mongoose");
 
 const FacultySchema = new mongoose.Schema({
+    empID: {
+        type: String,
+        required: true,
+        unique: true
+    },
     name: {
         type: String,
         required: true
+    },
+    designation:{
+        type:String,
+        required:true
     },
     email:{
         type:String,
