@@ -32,11 +32,11 @@ scheduleApi.get("/free", async (req, res) => {
     }
 
     // Convert period to a number
-    const periodNum = Number(period);
+    const periodNumbers = period.split(",").map(Number);
 
     // Find free faculties based on the given day & period
     const freeFaculties = await Schedule.find({
-      schedule: { $elemMatch: { day, freePeriods: periodNum } }
+      schedule: { $elemMatch: { day, freePeriods: { $all: periodNumbers }} }
     }).populate("facultyId", "name department email");
 
     if (!freeFaculties.length) {
