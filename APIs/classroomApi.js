@@ -2,6 +2,7 @@ const express = require("express");
 const Classroom = require("../models/Classroom");
 const classroomApi = express.Router();
 
+// Add classrooms (POST)
 classroomApi.post("/", async (req, res) => {
   try {
     const classrooms = req.body;
@@ -24,6 +25,16 @@ classroomApi.post("/", async (req, res) => {
 
   } catch (error) {
     res.status(500).json({ message: "Error adding classrooms", error });
+  }
+});
+
+// ✅ Get all classrooms (GET)
+classroomApi.get("/", async (req, res) => {
+  try {
+    const classrooms = await Classroom.find(); // Fetch all classrooms from DB
+    res.status(200).json(classrooms);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching classrooms", error });
   }
 });
 

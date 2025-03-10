@@ -93,4 +93,57 @@ seatingPlanApi.post("/generate", async (req, res) => {
   }
 });
 
+// ✅ Get Full Exam Schedule
+seatingPlanApi.get("/schedule", async (req, res) => {
+  try {
+    // Get the latest (only) seating schedule
+    const schedule = await SeatingPlan.findOne();
+
+    if (!schedule) {
+      return res.status(404).json({ message: "No exam schedule found" });
+    }
+
+    res.status(200).json({ message: "Exam schedule retrieved", schedule });
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching schedule", error });
+  }
+});
+
+// ✅ Get Student's Room & Seat Number by Roll Number
+seatingPlanApi.get("/seating/:rollNumber", async (req, res) => {
+  try {
+    const { rollNumber } = req.params;
+
+    // Fetch the latest seating plan
+    const seatingPlan = await SeatingPlan.findOne();
+    if (!seatingPlan) {
+      return res.status(404).json({ message: "No seating plan available" });
+    }
+
+    let studentSeat = null;
+    
+    // Search for the student in the seating plan
+    for (const room of seatingPlan.seats) {
+      const foundStudent = room.students.find(student => student.rollNumber === rollNumber);
+      if (foundStudent) {
+        studentSeat = {
+          classroom: room.classroom,
+          seatNumber: foundStudent.seatNumber,
+          studentName: foundStudent.name,
+          subjectCode: foundStudent.subjectCode
+        };
+        break;
+      }
+    }
+
+    if (!studentSeat) {
+      return res.status(404).json({ message: "Student not found in seating plan" });
+    }
+
+    res.status(200).json({ message: "Seating details retrieved", seatingDetails: studentSeat });
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching seating details", error });
+  }
+});
+
 module.exports = seatingPlanApi;
