@@ -9,6 +9,12 @@ require('dotenv').config()
 const app = express()
 app.use(express.json())
 
+app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type'],
+  })); 
+
 mongoose
 .connect(process.env.DB_URL)
 .then(() => console.log('Connected to MongoDB'))
@@ -18,7 +24,7 @@ mongoose
   app.use('/faculties',facultyApi)
   app.use("/schedules", scheduleApi);
 
-  const Room = require("./models/Room");
+//   const Room = require("./models/Room");
   const Timetable = require("./models/Timetable");
   app.get("/available-rooms", async (req, res) => {
     const { day, timeSlot } = req.query;
