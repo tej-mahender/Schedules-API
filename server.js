@@ -6,6 +6,7 @@ const studentApi = require('./APIs/studentApi')
 const subjectApi = require('./APIs/subjectApi')
 const seatingApi = require('./APIs/seatingApi')
 const classroomApi = require('./APIs/classroomApi')
+const loginApi = require('./APIs/loginApi');
 
 const cors = require('cors')
 
@@ -33,6 +34,7 @@ mongoose
   app.use('/exams',seatingApi)
   app.use('/classrooms',classroomApi)
   app.use('/seating-plan',seatingApi)
+  app.use('/login',loginApi)
 
 //   const Room = require("./models/Room");
   const Timetable = require("./models/Timetable");
