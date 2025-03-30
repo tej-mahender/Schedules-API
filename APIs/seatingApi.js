@@ -15,66 +15,63 @@ seatingPlanApi.post("/generate", async (req, res) => {
       return res.status(400).json({ message: "Subjects and classrooms are required" });
     }
 
-    // Fetch students enrolled in selected subjects
-    const students = await Student.find({ subjectCodes: { $in: subjects } });
+    // Fetch students enrolled in selected subjects and sort by roll number
+    let students = await Student.find({ subjectCodes: { $in: subjects } });
 
     if (students.length === 0) {
       return res.status(404).json({ message: "No students found for selected subjects" });
     }
 
-    // Shuffle students randomly to prevent malpractice
-    students.sort(() => Math.random() - 0.5);
+    // ✅ Sort students by roll number in ascending order
+    students.sort((a, b) => a.rollNumber.localeCompare(b.rollNumber));
 
     // Fetch classroom details
     const availableRooms = await Classroom.find({ name: { $in: classrooms } });
 
+    // ✅ Calculate ideal number of students per classroom
+    let totalStudents = students.length;
+    let totalRooms = availableRooms.length;
+    let studentsPerRoom = Math.ceil(totalStudents / totalRooms); // Ensure all students are evenly distributed
+
     let seatingPlan = [];
     let studentIndex = 0;
-    let totalStudents = students.length;
 
-    // Distribute students across classrooms
+    // ✅ Assign students in roll number order, distributing them evenly
     for (const room of availableRooms) {
-      let roomCapacity = Math.min(24, room.maxCapacity); // Default 24, but can go up to maxCapacity
+      let roomCapacity = Math.min(studentsPerRoom, room.maxCapacity); // Assign evenly but respect max capacity
       let assignedStudents = [];
 
-      while (assignedStudents.length < roomCapacity && studentIndex < totalStudents) {
+      for (let i = 0; i < roomCapacity && studentIndex < totalStudents; i++) {
         assignedStudents.push({
           rollNumber: students[studentIndex].rollNumber,
           name: students[studentIndex].name,
-          subjectCode: students[studentIndex].subjectCodes[0], // Assuming one subject per exam
-          seatNumber: assignedStudents.length + 1 // Seat Number
+          subjectCode: students[studentIndex].subjectCodes[0],
+          seatNumber: i + 1
         });
         studentIndex++;
       }
 
       seatingPlan.push({ classroom: room.name, students: assignedStudents });
 
-      // If all students are assigned, break
       if (studentIndex >= totalStudents) break;
     }
 
-    // If students are still left, distribute them to available classrooms beyond 24
-    let remainingStudents = students.slice(studentIndex);
-    for (let room of seatingPlan) {
-      if (remainingStudents.length === 0) break;
-
-      let remainingCapacity = availableRooms.find(r => r.name === room.classroom).maxCapacity - room.students.length;
-
-      while (remainingCapacity > 0 && remainingStudents.length > 0) {
-        room.students.push({
-          rollNumber: remainingStudents[0].rollNumber,
-          name: remainingStudents[0].name,
-          subjectCode: remainingStudents[0].subjectCodes[0],
-          seatNumber: room.students.length + 1
-        });
-
-        remainingStudents.shift();
-        remainingCapacity--;
+    // ✅ If students remain, they are added sequentially in order to classrooms
+    while (studentIndex < totalStudents) {
+      for (let room of seatingPlan) {
+        if (studentIndex >= totalStudents) break;
+        let maxCapacity = availableRooms.find(r => r.name === room.classroom).maxCapacity;
+        
+        if (room.students.length < maxCapacity) {
+          room.students.push({
+            rollNumber: students[studentIndex].rollNumber,
+            name: students[studentIndex].name,
+            subjectCode: students[studentIndex].subjectCodes[0],
+            seatNumber: room.students.length + 1
+          });
+          studentIndex++;
+        }
       }
-    }
-
-    if (remainingStudents.length > 0) {
-      return res.status(400).json({ message: "Not enough classrooms to accommodate all students" });
     }
 
     // Save Seating Plan to Database
@@ -102,7 +99,16 @@ seatingPlanApi.get("/schedule", async (req, res) => {
       return res.status(404).json({ message: "No exam schedule found" });
     }
 
-    res.status(200).json({ message: "Exam schedule retrieved", schedule });
+    // Sort students within each classroom
+    const sortedSchedule = {
+      ...schedule.toObject(),
+      seats: schedule.seats.map(room => ({
+        classroom: room.classroom,
+        students: room.students.sort((a, b) => a.rollNumber.localeCompare(b.rollNumber))
+      }))
+    };
+
+    res.status(200).json({ message: "Exam schedule retrieved", schedule: sortedSchedule });
   } catch (error) {
     res.status(500).json({ message: "Error fetching schedule", error });
   }
