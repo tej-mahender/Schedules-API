@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const bcrypt = require("bcrypt");
 
 const FacultySchema = new mongoose.Schema({
     empID: {
@@ -10,19 +11,29 @@ const FacultySchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    designation:{
-        type:String,
-        required:true
+    email: {
+        type: String,
+        required: true,
+        unique: true
     },
-    email:{
-        type:String,
-        required:true,
-        unique : true
+    department: {
+        type: String,
+        required: true
     },
-    department:{
-        type:String,
-        required:true
+    role: {
+        type: String,
+        enum: ["faculty", "hod", "admin"],  // Only HOD and Admin can log in
+        default: "faculty"
+    },
+    password: {
+        type: String,
+        required: true
     }
 });
+
+// Compare passwords for login
+FacultySchema.methods.comparePassword = function (password) {
+    return bcrypt.compare(password, this.password);
+};
 
 module.exports = mongoose.model("Faculty", FacultySchema);
