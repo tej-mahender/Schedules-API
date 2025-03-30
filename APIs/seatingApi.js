@@ -6,7 +6,7 @@ const SeatingPlan = require("../models/SeatingPlan");
 
 const seatingPlanApi = express.Router();
 
-// Generate Seating Plan
+// ✅ Generate Seating Plan
 seatingPlanApi.post("/generate", async (req, res) => {
   try {
     const { subjects, classrooms, examDate } = req.body;
@@ -90,11 +90,10 @@ seatingPlanApi.post("/generate", async (req, res) => {
   }
 });
 
-
-// ✅ Get Full Exam Schedule (Sorted)
+// ✅ Get Full Exam Schedule (Fetch Most Recent)
 seatingPlanApi.get("/schedule", async (req, res) => {
   try {
-    const schedule = await SeatingPlan.findOne();
+    const schedule = await SeatingPlan.findOne().sort({ _id: -1 });
 
     if (!schedule) {
       return res.status(404).json({ message: "No exam schedule found" });
@@ -115,20 +114,18 @@ seatingPlanApi.get("/schedule", async (req, res) => {
   }
 });
 
-// ✅ Get Student's Room & Seat Number by Roll Number
+// ✅ Get Student's Room & Seat Number by Roll Number (Fetch Most Recent)
 seatingPlanApi.get("/seating/:rollNumber", async (req, res) => {
   try {
     const { rollNumber } = req.params;
+    const seatingPlan = await SeatingPlan.findOne().sort({ _id: -1 });
 
-    // Fetch the latest seating plan
-    const seatingPlan = await SeatingPlan.findOne();
     if (!seatingPlan) {
       return res.status(404).json({ message: "No seating plan available" });
     }
 
     let studentSeat = null;
     
-    // Search for the student in the seating plan
     for (const room of seatingPlan.seats) {
       const foundStudent = room.students.find(student => student.rollNumber === rollNumber);
       if (foundStudent) {

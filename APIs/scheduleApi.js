@@ -1,16 +1,32 @@
 const express = require("express");
 const scheduleApi = express.Router();
 const Schedule = require("../models/scheduleModel");
+const Faculty = require("../models/facultyModel");
 
 // ✅ Insert Schedules
 scheduleApi.post("/", async (req, res) => {
   try {
-    const schedules = await Schedule.insertMany(req.body);
-    res.status(201).json({ message: "Schedules added!", schedules });
+    const schedules = await Promise.all(req.body.map(async (schedule) => {
+      const faculty = await Faculty.findOne({ empID: schedule.empID }); // Find faculty by empID
+      if (!faculty) {
+        throw new Error(`Faculty with empID ${schedule.empID} not found`);
+      }
+
+      return {
+        facultyId: faculty._id,  // Store facultyId automatically
+        empID: schedule.empID,
+        schedule: schedule.schedule
+      };
+    }));
+
+    const insertedSchedules = await Schedule.insertMany(schedules);
+    res.status(201).json({ message: "Schedules added!", schedules: insertedSchedules });
+
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
+
 
 // ✅ Get Schedules for a Specific Faculty using empID
 scheduleApi.get("/emp/:empID", async (req, res) => {
@@ -52,6 +68,7 @@ scheduleApi.get("/free", async (req, res) => {
 
     res.status(200).json(facultyDetails);
   } catch (error) {
+    console.error("Error fetching free faculties:", error);
     res.status(500).json({ error: error.message });
   }
 });
